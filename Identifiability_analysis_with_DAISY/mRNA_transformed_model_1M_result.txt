@@ -1,0 +1,41 @@
+
+translation kinetics after mRNA transfection
+
+(only 1st moment considered -> ODE model)
+
+MODEL EQUATION(S)$
+
+c_ := {df(m10,t)= - m10*theta1,
+df(m01,t)= - (m01 - offset)*theta3 + m0*m10*scale*theta2,
+y1=m01}$
+
+CHARACTERISTIC SET$
+
+aa_(1) := df(y1,t,2) + df(y1,t)*(theta1 + theta3) + y1*theta1*theta3 - offset*theta1*theta3$
+
+aa_(2) := df(y1,t) - m10*m0*scale*theta2 + y1*theta3 - offset*theta3$
+
+aa_(3) :=  - m01 + y1$
+
+MODEL ALGEBRAICALLY OBSERVABLE$
+
+PARAMETER VALUES$
+
+b2_ := {theta1=2,theta2=3,theta3=5,m0=7,scale=11,offset=13}$
+
+MODEL PARAMETER SOLUTION(S)$
+
+g_ := {{offset=13,theta1=5,theta3=2},{offset=13,theta1=2,theta3=5}}$
+
+MODEL NON IDENTIFIABLE$
+
+IDENTIFIABILITY WITH ALL INITIAL CONDITIONS (IC_)$
+
+ic_ := {m01=offset,m10=1}$
+
+MODEL PARAMETER SOLUTIONS$
+
+gi_ := {{m0=231/(scale*theta2),theta1=5,offset=13,theta3=2},
+{m0=231/(scale*theta2),theta1=2,offset=13,theta3=5}}$
+
+MODEL NON IDENTIFIABLE$

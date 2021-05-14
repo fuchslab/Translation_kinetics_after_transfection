@@ -1,0 +1,87 @@
+---
+title: "Analysis of individual stanfit objects"
+output: pdf_document
+date: \today
+geometry: "left=2.5cm,right=2.5cm,top=2cm,bottom=2cm"
+---
+
+<!-- can be compiled within the container by  -->
+<!-- Rscript --vanilla -e 'rmarkdown::render(input = "R_markdown/Analysis_of_several_stanfits_experimental_data_d2eGFP_ODE.Rmd", -->
+<!-- output_file = "pdf_files/Analysis_of_several_stanfits_experimental_data_d2eGFP_ODE.pdf", -->
+<!-- output_format = "pdf_document", knit_root_dir = getwd())' -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+knitr::opts_chunk$set(fig.width=3.5)
+knitr::opts_chunk$set(fig.height=2.5)
+
+knitr::opts_knit$set(global.par=TRUE)
+
+knitr::opts_knit$set(comment=NA)
+
+knitr::opts_knit$set(width=500)
+
+knitr::opts_knit$set(message=FALSE)
+
+```
+
+```{r setup2, message=FALSE}
+library(rstan)
+par(mar = c(3.5,4,4,2))
+```
+
+
+```{r}
+dataset <- "experimental_data_d2eGFP"
+model_type <- "ODE"
+```
+
+
+# Dataset: `r dataset`, model type: `r model_type`
+
+```{r}
+path_aggregated_output <- paste0("intermediate_output_files/aggregated_output/",
+                                 dataset, "/aggregated_output_", model_type,
+                                 ".Rdata")
+load(path_aggregated_output)
+# contains mat_diagnostics_overall, arr_summary
+
+param_names <- dimnames(arr_summary)$parameters
+```
+
+```{r}
+index_trajectory <- 1
+```
+
+## Trajectory `r index_trajectory`: no pathologies
+```{r trajectory1, results='asis', message=FALSE}
+res <- knitr::knit_child('template_plots_for_indivisual_trajectories.Rmd',
+                          quiet = TRUE)
+cat(unlist(res), sep = '\n')
+```
+
+
+```{r}
+index_trajectory <- 13
+```
+
+## Trajectory `r index_trajectory`: very high Rhat for m0  prod_m0_scale  x[180,1]
+```{r trajectory2, results='asis', message=FALSE}
+res <- knitr::knit_child('template_plots_for_indivisual_trajectories.Rmd',
+                          quiet = TRUE)
+cat(unlist(res), sep = '\n')
+```
+
+
+```{r}
+index_trajectory <- 79
+```
+
+## Trajectory `r index_trajectory`: some divergent transitions
+```{r trajectory3, results='asis', message=FALSE}
+res <- knitr::knit_child('template_plots_for_indivisual_trajectories.Rmd',
+                          quiet = TRUE)
+cat(unlist(res), sep = '\n')
+```

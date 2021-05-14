@@ -1,0 +1,43 @@
+\vspace{10pt}
+### `r param`
+```{r, comment=NA}
+high_Rhat <- arr_summary[, param, "Rhat"] > thr_high_Rhat
+if(any(high_Rhat)){
+  cat(paste0("number of trajectories with Rhat > ", thr_high_Rhat, ":\t"))
+  
+  cat(sum(high_Rhat))
+  
+  cat(paste0("\n\nindizes of trajectories with Rhat > ", thr_high_Rhat, ":\n"))
+  cat(which(high_Rhat))
+  
+  very_high_Rhat <- arr_summary[, param, "Rhat"] > thr_very_high_Rhat
+  if(any(very_high_Rhat)){
+    cat(paste0("\n\nnumber of trajectories with Rhat > ", thr_very_high_Rhat, ":\t"))
+    
+    cat(sum(very_high_Rhat))
+    
+    cat(paste0("\n\nindices of trajectories with Rhat > ", thr_very_high_Rhat, ":\n"))
+    cat(which(very_high_Rhat))
+    # format(round(arr_summary[which(very_high_Rhat), param, "Rhat"], digits = 2))
+    
+    cat("\n\n")
+    
+    hist(arr_summary[which(very_high_Rhat), param, "Rhat"], main ="", xlab = "")
+    title(xlab = paste0("R-hat for ", param), line = 2.5)
+    title(main = paste0("R-hat > ", thr_very_high_Rhat), line = 0.5)
+  }
+}else{
+  cat(paste0("no Rhat > ", thr_high_Rhat))
+}
+
+if(any(very_high_Rhat)){
+  hist(arr_summary[- which(very_high_Rhat), param, "Rhat"], main ="", xlab = "")
+}else{
+  hist(arr_summary[, param, "Rhat"], main ="", xlab = "")
+}
+title(xlab = paste0("R-hat for ", param), line = 2.5)
+title(main = paste0("R-hat <= ", thr_very_high_Rhat), line = 0.5)
+
+cat("\n")
+```
+

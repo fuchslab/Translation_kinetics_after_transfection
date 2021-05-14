@@ -1,0 +1,149 @@
+\vspace{10pt}
+## Trajectory `r index_trajectory`
+```{r, comment=NA, collapse=TRUE, fig.height=4, fig.width=6}
+# load stanfit object
+path_stanfit_object <- paste0("intermediate_output_files/stanfit_objects/",
+                                 dataset, "_", model_type, "/stanfit_object_",
+                                 index_trajectory, ".rds")
+stanfit_object <- readRDS(path_stanfit_object)
+
+# load corresponding data trajectory
+# split input argument `dataset` at second underscore
+dataset_split <- strsplit(sub('(^[^_]+_[^_]+)_(.*)$', '\\1 \\2',
+                              dataset), ' ')[[1]]
+input_path <- paste0("data/", dataset_split[1], "/", dataset_split[2], "/", sep = "")
+if(dataset_split[1] == "experimental_data"){
+  file_name <- paste0("observed_trajectory_", index_trajectory, 
+                      ".Rdata", sep = "")
+}else if(dataset_split[1] == "simulated_data"){
+  file_name <- paste0("simulated_trajectory_", index_trajectory, 
+                      ".Rdata", sep = "")
+}
+
+# contains the following variables: index, Observations, random_seed
+load(file = paste0(input_path, file_name, sep = ""))
+plot(Observations[,1], Observations[,2], xlab = "", ylab = "", pch=20)
+title(xlab = paste0("Time"), line = 2.5)
+title(ylab = paste0("Fluorescence intensity"), line = 2.5)
+```
+
+```{r, comment=NA}
+s <- summary(stanfit_object, pars = param_names, probs = c(0.05, 0.5, 0.95))$summary
+s <- round(s, digits = 3)
+s[,"n_eff"] <- round(s[,"n_eff"], digits = 0)
+s
+```
+```{r, comment=NA}
+check_hmc_diagnostics(stanfit_object)
+```
+
+
+### Traceplots
+```{r, fig.height=12, fig.width=10, comment=NA}
+traceplot(stanfit_object,
+          pars = param_names,
+          inc_warmup = FALSE, ncol = 3)
+```
+
+### Density plots with 95% CI,  median (solid line), and if applicable true value (dashed line)
+```{r, message=FALSE, fig.height=12, fig.width=10, comment=NA}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+stan_plot_color <- "slategray2" # 
+show_dens <- TRUE
+
+plot_density <- function(pars){
+  show_dens <- TRUE
+  threshold <- data.frame(x = c(s[pars,1], true_values[pars]), name = c("50%", "true value"))
+  p <-stan_plot(stanfit_object, pars = pars,
+                fill_color = stan_plot_color, show_density = show_dens,
+                ci_level = .95, outer_level = 1) +
+    geom_vline(aes(xintercept = x, linetype = name), data = threshold) +
+    scale_linetype_manual(name = "",
+                          values = c( "solid", "dashed")) +
+    theme(panel.grid = element_blank())
+}
+
+plots <- list()
+for(i in 1:length(param_names)){
+  plots[[i]] <- plot_density(param_names[i])
+}
+
+multiplot(plotlist = plots, cols = 2)
+```
+
+### Pair plots
+```{r, fig.height=10, fig.width=10}
+if(model_type == "SDE"){
+  if(dataset_split2[2] == "with"){
+    pars_set_1 <- c("theta[1]", "theta[3]", "prod_theta2_m0_scale",
+                                   "sigma", "offset", "lp__")
+    pars_set_2 <- c("theta[2]", "m0", "scale",
+                                   "prod_theta2_m0", "prod_theta2_scale", 
+                                   "prod_m0_scale", "prod_theta2_m0_scale")
+    pars_set_3 <- c("m0", "prod_theta2_m0_scale", "sigma", "x[180,1]", "x[180,2]")
+  }else{
+    pars_set_1 <- c("theta[1]", "theta[3]", "prod_theta2_m0_scale","lp__")
+    pars_set_2 <- c("theta[2]", "m0", "scale", "prod_theta2_m0", 
+                    "prod_theta2_scale", "prod_m0_scale", "prod_theta2_m0_scale")
+    pars_set_3 <- c("m0", "prod_theta2_m0_scale", "x[180,1]", "x[180,2]")
+  }
+    
+}else if(model_type == "ODE"){
+  pars_set_1 <- c("theta[1]", "theta[3]", "prod_theta2_m0_scale", "t0",
+                                 "sigma", "offset", "lp__")
+  pars_set_2 <- c("theta[2]", "m0", "scale",
+                                 "prod_theta2_m0", "prod_theta2_scale", 
+                                 "prod_m0_scale", "prod_theta2_m0_scale")
+  pars_set_3 <- c("m0", "prod_theta2_m0_scale", "sigma", "t0", "x2_sim[180]")
+}
+
+pairs(stanfit_object, pars = pars_set_1)
+```
+
+```{r, fig.height=10, fig.width=10}
+pairs(stanfit_object, pars = pars_set_2)
+```
+```{r, fig.height=10, fig.width=10}
+pairs(stanfit_object, pars = pars_set_3)
+```
+
+
+<!-- ```{r, fig.height=10, fig.width=10} -->
+<!-- pairs(stanfit_object, pars = c("x[10,2]", "x[90,2]", "x[175,2]", "x[180,2]", "prod_theta2_m0_scale")) -->
+<!-- ``` -->
+

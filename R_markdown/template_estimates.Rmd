@@ -1,0 +1,36 @@
+\vspace{10pt}
+### `r param`
+```{r, comment=NA, collapse=TRUE}
+
+# estimates of the median ------------------------------------------------------
+hist(arr_summary[ , param, "50%"], breaks = 15, xlab = "", main = "")
+  title(xlab = paste0("Median estimates for ", param), line = 2.5)
+if(dataset_split[1] == "simulated_data"){
+  abline(v = true_values[param], lwd = 2, lty = 2)
+}
+
+# # alternatively as density plot:
+# median_dens <- density(arr_summary[ , param, "50%"])
+# plot(median_dens, main = paste0("Median estimates for ", param))
+# abline(v = min(arr_summary[ , param, "50%"]))
+# abline(v = max(arr_summary[ , param, "50%"]))
+# max_dens <- which(median_dens$y == max(median_dens$y))
+# abline(v = median_dens$x[max_dens])
+
+# estimates of the mean ------------------------------------------------------
+hist(arr_summary[ , param, "mean"], breaks = 15, xlab = "", main = "")
+  title(xlab = paste0("Mean estimates for ", param), line = 2.5) 
+if(dataset_split[1] == "simulated_data"){
+  abline(v = true_values[param], lwd = 2, lty = 2)
+}
+
+  
+# standard error of the mean of the mean ------------------------------------------------------
+hist(arr_summary[ , param, "se_mean"], breaks = 20, xlab = "", main = "")
+  title(xlab = paste0("st. error of mean for ", param), line = 2.5)  
+  
+# Length of 95% credible intervals ---------------------------------------------
+hist(arr_summary[ , param, "97.5%"] - arr_summary[ , param, "2.5%"], breaks = 15, 
+     xlab = "", main = "")
+  title(xlab = paste0("Length of 95% CI for ", param), line = 2.5)
+```

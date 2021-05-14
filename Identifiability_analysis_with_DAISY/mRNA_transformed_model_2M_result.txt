@@ -1,0 +1,59 @@
+
+transformed model of translation kinetics after mRNA transfection
+
+(1st and 2nd moment considered -> surrogate model for SDE model)
+
+MODEL EQUATION(S)$
+
+c_ := {df(m10,t)= - m10*theta1,
+df(m01,t)= - (m01 - offset)*theta3 + m0*m10*scale*theta2,
+df(m20,t)=( - 2*m0*m20*theta1 + m10*theta1)/m0,
+df(m02,t)= - (2*m02 + offset*scale - (2*offset + scale)*m01)*theta3 + (m10*scale + 2*m11)*m0*scale*theta2,
+df(m11,t)= - ((theta1 + theta3)*m11 - m10*offset*theta3) + m0*m20*scale*theta2,
+y1=m01,
+y2=m02}$
+
+CHARACTERISTIC SET$
+
+aa_(1) := df(y1,t,2) + df(y1,t)*(theta1 + theta3) + y1*theta1*theta3 - offset*theta1*theta3$
+
+aa_(2) := df(y1,t)*theta1*( - 6*offset*theta3 - 2*scale*theta2 - 3*scale*theta3) + df(y2,t,3) + 3*df(y2,t,2)*(
+theta1 + theta3) + 2*df(y2,t)*(theta1**2 + 4*theta1*theta3 + theta3**2) + 2*y1*theta1*theta3*( - 2*offset*
+theta1 - 2*offset*theta3 - scale*theta1 - scale*theta2 - scale*theta3) + 4*y2*theta1*theta3*(theta1 + theta3) 
++ 2*offset*scale*theta1*theta3*(theta1 + theta2 + theta3)$
+
+aa_(3) := df(y1,t) - m10*m0*scale*theta2 + y1*theta3 - offset*theta3$
+
+aa_(4) :=  - m01 + y1$
+
+aa_(5) := 2*df(y1,t)*theta3*( - 2*offset - scale) + df(y2,t,2) + df(y2,t)*(theta1 + 3*theta3) - 2*m20*m0**2*
+scale**2*theta2**2 + y1*theta3*( - 2*offset*theta1 - 4*offset*theta3 - scale*theta1 - 2*scale*theta3) + 2*y2*
+theta3*(theta1 + theta3) + offset*theta3*(2*offset*theta3 + scale*theta1 + 2*scale*theta3)$
+
+aa_(6) :=  - m02 + y2$
+
+aa_(7) :=  - df(y1,t)*scale + df(y2,t) - 2*m11*m0*scale*theta2 - 2*y1*theta3*(offset + scale) + 2*y2*theta3 + 
+2*offset*scale*theta3$
+
+MODEL ALGEBRAICALLY OBSERVABLE$
+
+PARAMETER VALUES$
+
+b2_ := {theta1=2,theta2=3,theta3=5,m0=7,scale=11,offset=13}$
+
+MODEL PARAMETER SOLUTION(S)$
+
+g_ := {{theta2=3,offset=13,scale=11,theta1=2,theta3=5},
+{theta2=( - 3)/29,offset=13,scale=319/20,theta1=5,theta3=2}}$
+
+MODEL NON IDENTIFIABLE$
+
+IDENTIFIABILITY WITH ALL INITIAL CONDITIONS (IC_)$
+
+ic_ := {m10=1,m01=offset,m20=1,m02=offset**2,m11=offset}$
+
+MODEL PARAMETER SOLUTIONS$
+
+gi_ := {{m0=7,theta2=3,theta1=2,scale=11,offset=13,theta3=5}}$
+
+MODEL GLOBALLY IDENTIFIABLE$

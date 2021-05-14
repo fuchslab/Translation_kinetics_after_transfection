@@ -1,0 +1,33 @@
+WRITE "translation kinetics after mRNA transfection"$
+WRITE "(only 1st moment considered -> ODE model)"$
+
+% B_ IS THE VARIABLE VECTOR 
+B_:={y1, m10, m01}$
+
+FOR EACH EL_ IN B_ DO DEPEND EL_,T$
+
+%B1_ IS THE UNKNOWN PARAMETER VECTOR
+% reparamtrization: phi = scale * theta2 * m0
+B1_:={theta1, theta3, offset, phi}$
+
+%NUMBER OF INPUTS 
+NU_:=0$
+%NUMBER OF OUTPUTS 
+NY_:=1$
+%NUMBER OF STATES 
+NX_:=2$
+
+%MODEL EQUATIONS
+C_:= {df(m10,t) = - theta1 * m10,
+      df(m01,t) = phi * m10 - theta3 * (m01 - offset),
+             y1 = m01}$
+
+FLAG_:=1$
+
+daisy()$
+
+%VALUES OF INITIAL CONDITIONS
+ICK_:={m01=offset, m10=1}$
+ICUNK_:={}$
+CONDINIZ()$
+END$

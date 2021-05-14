@@ -1,0 +1,30 @@
+\vspace{10pt}
+### `r param`
+```{r, comment=NA, collapse=TRUE}
+low_n_eff <- arr_summary[, param, "n_eff"] < thr_n_eff_low
+if(any(low_n_eff)){
+  cat(paste0("number of trajectories with n_eff < ", thr_n_eff_low, ":\t"))
+  cat(sum(low_n_eff))
+  
+  cat(paste0("\n\nindices of trajectories with n_eff < ", thr_n_eff_low, ":\n"))
+  cat(which(low_n_eff))
+  arr_summary[which(low_n_eff), param, "n_eff"]
+  
+  hist(arr_summary[which(low_n_eff), param, "n_eff"], xlab = "", main = "")
+  title(xlab = paste0("n_eff for ", param), line = 2.5)
+  title(main = paste0("n_eff < ", thr_n_eff_low), line = .5, cex.main=.8)
+  hist(arr_summary[- which(low_n_eff), param, "n_eff"], xlab = "", main = "")
+  title(xlab = paste0("n_eff for ", param), line = 2.5)
+  title(main = paste0("n_eff >= ", thr_n_eff_low), line = .5, cex.main=.8)
+
+}else{
+  cat(paste0("no n_eff < ", thr_n_eff_low), "\t")
+  # plot(c(0, 10), c(0, 10), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+  # text(x = 5, y = 5, paste0("no n_eff < ", thr_n_eff_low), cex = 1, col = "black")
+  hist(arr_summary[, param, "n_eff"], main ="", xlab = "")
+  title(xlab = paste0("n_eff for ", param), line = 2.5)
+  title(main = paste0("n_eff >= ", thr_n_eff_low), line = .5, cex.main=.8)
+}
+
+cat("\n")
+```

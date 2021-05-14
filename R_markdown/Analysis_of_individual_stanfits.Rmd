@@ -1,0 +1,103 @@
+---
+title: "Analysis of individual stanfit objects"
+output: pdf_document
+date: \today
+geometry: "left=2.5cm,right=2.5cm,top=2cm,bottom=2cm"
+params:
+  dataset: "simulated_data_dataset1_with_error"
+  model_type: "SDE"
+  index_trajectory: 6
+  
+---
+
+<!-- can be compiled within the container by  e.g. -->
+<!-- Rscript --vanilla -e 'pars <- commandArgs(trailingOnly=TRUE); -->
+<!--   rmarkdown::render(input = "R_markdown/Analysis_of_individual_stanfits.Rmd", -->
+<!--   output_format = "pdf_document", knit_root_dir = getwd(), -->
+<!--   output_file = paste0("pdf_files/Analysis_of_individual_stanfits_", pars[1], -->
+<!--   "_", pars[2], "_", pars[3], ".pdf"), -->
+<!--   params = list(dataset = pars[1], model_type = pars[2], -->
+<!--   index_trajectory = as.numeric(pars[3])))' simulated_data_dataset1_no_error ODE 6 -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+knitr::opts_chunk$set(fig.width=3.5)
+knitr::opts_chunk$set(fig.height=2.5)
+
+knitr::opts_knit$set(global.par=TRUE)
+
+knitr::opts_knit$set(comment=NA)
+
+knitr::opts_knit$set(width=500)
+
+knitr::opts_knit$set(message=FALSE)
+
+```
+
+```{r setup2, message=FALSE}
+library(rstan)
+par(mar = c(3.5,4,4,2))
+```
+
+```{r}
+dataset <- params$dataset
+model_type <- params$model_type
+index_trajectory <- params$index_trajectory
+```
+
+
+# Dataset: `r dataset`, model type: `r model_type`
+
+<!-- can be compiled within the container by  -->
+<!-- Rscript --vanilla -e 'rmarkdown::render(input = "R_markdown/summarize_aggregated_output.Rmd", output_format = "pdf_document", knit_root_dir = getwd())' -->
+
+```{r}
+path_aggregated_output <- paste0("intermediate_output_files/aggregated_output/",
+                                 dataset, "/aggregated_output_", model_type,
+                                 ".Rdata")
+load(path_aggregated_output)
+# contains mat_diagnostics_overall, arr_summary
+
+param_names <- dimnames(arr_summary)$parameters
+```
+```{r}
+# split input argument `dataset` at second underscore
+dataset_split <- strsplit(sub('(^[^_]+_[^_]+)_(.*)$', '\\1 \\2',
+                              dataset), ' ')[[1]]
+# split second element  at underscores
+dataset_split2 <- strsplit(dataset_split[2], '_')[[1]]
+
+# for simulated data, load and restructure the model parameters used for simulation
+if(dataset_split[1] == "simulated_data"){
+  data_path <- paste0("data/simulated_data/", dataset_split[2], "/", sep = "")
+  load(file = paste0(data_path, "simulated_trajectory_1.Rdata", sep = ""))
+  true_values <- rep(NA, times=length(param_names))
+  names(true_values) <- param_names
+  true_values[c("theta[1]","theta[2]","theta[3]")] <- pars$theta
+  true_values["m0"] <- pars$m0
+  true_values["scale"] <- pars$scale
+  true_values["prod_theta2_m0"] <- pars$theta[2] * pars$m0
+  true_values["prod_theta2_scale"] <- pars$theta[2] * pars$scale
+  true_values["prod_m0_scale"] <- pars$m0 * pars$scale
+  true_values["prod_theta2_m0_scale"] <- pars$theta[2] * pars$m0 * pars$scale
+  if(model_type == "ODE" ){
+    true_values["sigma"] <- pars$sigma
+    true_values["offset"] <- pars$offset
+    true_values["t0"] <- pars$t0
+  }else if(dataset_split2[2] == "with"){
+    true_values["sigma"] <- pars$sigma
+    true_values["offset"] <- pars$offset
+  }
+  
+}  
+```
+
+
+```{r estimates, results='asis', message=FALSE}
+res <- knitr::knit_child('template_plots_for_indivisual_trajectories.Rmd',
+                          quiet = TRUE)
+cat(unlist(res), sep = '\n')
+```
+

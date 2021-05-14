@@ -1,0 +1,556 @@
+---
+title: "Aggregated sampling output"
+output:
+  pdf_document:
+    keep_tex: false
+date: \today
+geometry: "left=2.5cm,right=2.5cm,top=2cm,bottom=2cm"
+params:
+  dataset: "simulated_data_dataset1_with_error"
+  model_type: "SDE"
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+knitr::opts_chunk$set(fig.width=3.5)
+knitr::opts_chunk$set(fig.height=2.5)
+
+knitr::opts_knit$set(global.par=TRUE)
+
+knitr::opts_knit$set(comment=NA)
+
+knitr::opts_knit$set(width=400)
+
+```
+
+```{r setup2}
+par(mar = c(3.5,4,4,2))
+```
+
+
+```{r}
+dataset <- params$dataset
+model_type <- params$model_type
+```
+
+
+# Dataset: `r dataset`, model type: `r model_type`
+
+<!-- can be compiled within the container by  -->
+<!-- Rscript --vanilla -e 'pars <- commandArgs(trailingOnly=TRUE); 
+rmarkdown::render(input = "R_markdown/summarize_aggregated_output.Rmd", 
+output_file = paste0("pdf_files/summarize_aggregated_output_",
+pars[1], "_", pars[2], ".pdf"), output_format = "pdf_document", knit_root_dir = getwd())' -->
+<!-- or see R_markdown/summarize_aggregated_output.sh -->
+
+```{r}
+path_aggregated_output <- paste0("intermediate_output_files/aggregated_output/",
+                                 dataset, "/aggregated_output_", model_type,
+                                 ".Rdata")
+load(path_aggregated_output)
+# contains mat_diagnostics_overall, arr_summary
+
+```
+
+## Trajectories without pathologies
+```{r thresholds}
+# threshold for effective sample size
+thr_n_eff_low <- 100
+# threshold for high Rhat
+thr_high_Rhat <- 1.02
+# threshold for very high Rhat
+thr_very_high_Rhat <- 1.1
+```
+
+e.g. no divergent transitions, no max_treedepth exceeded, no Rhat > `r thr_very_high_Rhat`, no n_eff < `r thr_n_eff_low`
+
+```{r, comment=NA}
+indices_with_div_trans <- which(mat_diagnostics_overall[,  "num_div_trans"] > 0)
+indices_with_max_td_exc <- which(mat_diagnostics_overall[,  "num_treedepth_exc"] > 0)
+indices_any_Rhat_gr_thr <- which(rowSums(arr_summary[ , , "Rhat"] > thr_very_high_Rhat) > 0)
+indices_any_n_eff_less_thr <- which(rowSums(arr_summary[ , , "n_eff"] < thr_n_eff_low) > 0)
+total_num_traj <- dim(mat_diagnostics_overall)[1]
+
+indices_with_pathologies <- unique(c(indices_with_div_trans, 
+                                     indices_with_max_td_exc,
+                                     indices_any_Rhat_gr_thr,
+                                     indices_any_n_eff_less_thr))
+cat(paste0("number of trajectories without pathologies (out of ", total_num_traj, "): \t"))
+total_num_traj - length(indices_with_pathologies)
+cat("\nindices of trajectories without pathologies: \n")
+(1:total_num_traj)[-indices_with_pathologies]
+```
+
+### no pathologies for a subset of the parameters
+```{r, comment=NA}
+# split input argument `dataset` at underscores
+dataset_split <- strsplit(dataset, '_')[[1]]
+if(model_type == "SDE"){
+  if(dataset_split[1] == "simulated" & dataset_split[4] == "no"){
+    subset_params = c("theta[1]", "theta[3]", "scale", "prod_theta2_m0",
+                    "prod_theta2_m0_scale")
+  }else{
+  subset_params = c("theta[1]", "theta[3]", "sigma", "scale", "offset", 
+                    "prod_theta2_m0", "prod_theta2_m0_scale")
+  }
+}else if(model_type == "ODE"){
+  subset_params = c("t0", "sigma", "scale", "offset", "prod_theta2_m0_scale")
+}
+
+cat(paste0("parameters considered: \t")) 
+subset_params
+```
+
+```{r, comment=NA}
+indices_with_div_trans <- which(mat_diagnostics_overall[,  "num_div_trans"] > 0)
+indices_with_max_td_exc <- which(mat_diagnostics_overall[,  "num_treedepth_exc"] > 0)
+indices_any_Rhat_gr_thr <- which(rowSums(arr_summary[ , subset_params, "Rhat"] > thr_very_high_Rhat) > 0)
+indices_any_n_eff_less_thr <- which(rowSums(arr_summary[ , subset_params, "n_eff"] < thr_n_eff_low) > 0)
+total_num_traj <- dim(mat_diagnostics_overall)[1]
+
+indices_with_pathologies <- unique(c(indices_with_div_trans, 
+                                     indices_with_max_td_exc,
+                                     indices_any_Rhat_gr_thr,
+                                     indices_any_n_eff_less_thr))
+cat(paste0("number of trajectories without pathologies (out of ", total_num_traj, "): \t"))
+total_num_traj - length(indices_with_pathologies)
+cat("\nindices of trajectories without pathologies: \n")
+(1:total_num_traj)[-indices_with_pathologies]
+```
+
+
+<!-- ```{r} -->
+<!-- gm_mean = function(x, na.rm=TRUE){ -->
+<!--   #xp(sum(log(x[x > 0]), na.rm=na.rm) / length(x)) -->
+<!--   #sqrt(sum(x^2)) -->
+<!--   mean(abs(x)) -->
+<!-- } -->
+<!-- # trajectory with minimum distance to median of estimates from trajectories with no pathologies -->
+<!-- median_no_path <- apply(arr_summary[(1:total_num_traj)[-indices_with_pathologies],subset_params,"50%"],2, median) -->
+<!-- dist_from_median <- apply(arr_summary[(1:total_num_traj)[-indices_with_pathologies],subset_params,"50%"], 1, -->
+<!--            function(x) (x - median_no_path)/median_no_path) -->
+<!-- geom_mean_from_median1 <- apply(dist_from_median, 2, gm_mean) -->
+<!-- geom_mean_from_median1[which.min(geom_mean_from_median1)] -->
+
+<!-- # trajectory with minimum distance to median of estimates from all trajectories -->
+<!-- median_no_path <- apply(arr_summary[,subset_params,"50%"],2, median) -->
+<!-- dist_from_median <- apply(arr_summary[(1:total_num_traj)[-indices_with_pathologies],subset_params,"50%"], 1, -->
+<!--            function(x)(x - median_no_path)/median_no_path) -->
+<!-- geom_mean_from_median2 <- apply(dist_from_median, 2, gm_mean) -->
+<!-- geom_mean_from_median2[which.min(geom_mean_from_median2)] -->
+
+<!-- # trajectory with minimum distance to mean of estimates from trajectories with no pathologies -->
+<!-- mean_no_path <- apply(arr_summary[(1:total_num_traj)[-indices_with_pathologies],subset_params,"50%"],2, mean) -->
+<!-- dist_from_mean <- apply(arr_summary[(1:total_num_traj)[-indices_with_pathologies],subset_params,"50%"], 1, -->
+<!--            function(x) (x - mean_no_path)/mean_no_path) -->
+<!-- geom_mean_from_mean3 <- apply(dist_from_mean, 2, gm_mean) -->
+<!-- geom_mean_from_mean3[which.min(geom_mean_from_mean3)] -->
+
+<!-- # trajectory with minimum distance to mean of estimates from all trajectories -->
+<!-- mean_no_path <- apply(arr_summary[,subset_params,"50%"],2, mean) -->
+<!-- dist_from_mean <- apply(arr_summary[(1:total_num_traj)[-indices_with_pathologies],subset_params,"50%"], 1, -->
+<!--            function(x) (x - mean_no_path)/mean_no_path) -->
+<!-- geom_mean_from_mean4 <- apply(dist_from_mean, 2, gm_mean) -->
+<!-- geom_mean_from_mean4[which.min(geom_mean_from_mean4)] -->
+<!-- ``` -->
+
+
+
+## Divergent transitions
+```{r div_trans, comment=NA}
+tab_div_trans <- table(mat_diagnostics_overall[,"num_div_trans"], dnn = "num. of div. transitions")
+knitr::kable(x = tab_div_trans)
+#hist(mat_diagnostics_overall[,"num_div_trans"])
+
+if(sum(tab_div_trans[-1]) > 0){
+  cat("total number of trajectories with div. transitions: ")
+  cat(paste0(sum(tab_div_trans[-1]), "\n"))
+  cat("indices of trajectories with div. transitions: \n")
+  cat(which(mat_diagnostics_overall[,"num_div_trans"]>0))
+}
+```
+
+
+## Maximum tree depth exceeded
+```{r treedep, comment=NA}
+tab_max_td <- table(mat_diagnostics_overall[,"num_treedepth_exc"], dnn = "num. of max t.d. exceeded")
+knitr::kable(x = tab_max_td)
+
+if(sum(tab_max_td[-1]) > 0){
+  cat("total number of trajectories were max. tree depth was exceeded: ")
+  cat(paste0(sum(tab_max_td[-1]), "\n"))
+  cat("indices of trajectories were max. tree depth was exceeded: \n")
+  cat(which(mat_diagnostics_overall[,"num_treedepth_exc"]>0))
+}
+
+#hist(mat_diagnostics_overall[,"num_treedepth_exc"])
+```
+
+## Bayesian fraction of missing information (BFMI)
+```{r bfmi, comment=NA}
+tab_low_BFMI <- table(mat_diagnostics_overall[,"num_BFMI_below_02"], dnn = "num. of low BFMI")
+knitr::kable(x = tab_low_BFMI)
+hist(mat_diagnostics_overall[,"min_BFMI"], xlab = "", main="")
+title(xlab = "min. of BFMI", line = 2.5)
+```
+
+## Total sampling time
+```{r time}
+hist(mat_diagnostics_overall[,"max_total_time"], xlab = "", main="")
+title(xlab = "max. total sampling time in seconds", line = 2.5)
+hist(mat_diagnostics_overall[,"mean_total_time"], xlab = "", main="")
+title(xlab = "mean total sampling time in seconds", line = 2.5)
+```
+
+## R-hat
+<!-- BDA3 p.287 : The condition of Rhat being ‘near’ 1 depends on the problem at hand,  -->
+<!-- but we generally have been satisfied with setting 1.1 as a threshold. -->
+### total number of trajectories with very high Rhat (> `r thr_very_high_Rhat`)  (out of `r dim(arr_summary)[1]`)
+```{r, comment=NA}
+sum(rowSums(arr_summary[, , "Rhat"] > thr_very_high_Rhat) > 0)
+```
+### number of trajectories with high Rhat per parameter (out of `r dim(arr_summary)[1]`)
+```{r, comment=NA}
+col_name_high_Rhat <- paste0("Rhat > ", thr_high_Rhat )
+col_name_very_high_Rhat <- paste0("Rhat > ", thr_very_high_Rhat )
+param_names <- dimnames(arr_summary)$parameters
+num_Rhat <- matrix(NA, nrow = length(param_names), ncol = 2, 
+                   dimnames = list(param_names, c(col_name_high_Rhat, col_name_very_high_Rhat)))
+num_Rhat[ , col_name_high_Rhat] <- colSums(arr_summary[, , "Rhat"] > thr_high_Rhat)
+num_Rhat[ , col_name_very_high_Rhat] <- colSums(arr_summary[, , "Rhat"] > thr_very_high_Rhat)
+knitr::kable(x = num_Rhat)
+```
+
+### number of parameters with high Rhat per trajectory (out of `r dim(arr_summary)[2]`)
+```{r, comment=NA, results='asis'}
+gr_high_Rhat <- rowSums(arr_summary[, , "Rhat"] > thr_high_Rhat)
+gr_very_high_Rhat <- rowSums(arr_summary[, , "Rhat"] > thr_very_high_Rhat)
+ind_gr_high_Rhat_gr_0 <- which(gr_high_Rhat > 0)
+num_Rhat <- matrix(NA, nrow = 2, ncol = length(ind_gr_high_Rhat_gr_0), 
+                   dimnames = list(c(col_name_high_Rhat, col_name_very_high_Rhat), 
+                                   ind_gr_high_Rhat_gr_0))
+num_Rhat[col_name_high_Rhat, ] <- gr_high_Rhat[ind_gr_high_Rhat_gr_0]
+num_Rhat[col_name_very_high_Rhat, ] <- gr_very_high_Rhat[ind_gr_high_Rhat_gr_0]
+
+col_num <- length(ind_gr_high_Rhat_gr_0)
+if(col_num <= 20){
+  knitr::kable(x = num_Rhat)
+}else{
+  n_full_row <- floor(col_num / 20)
+  for(i in 1:n_full_row){
+    print(knitr::kable(x = num_Rhat[, ((i-1)*20 + 1): (i*20)]))
+  }
+  if( n_full_row * 20 > col_num){
+    knitr::kable(x = num_Rhat[, (n_full_row*20 + 1): col_num])
+  }
+}
+```
+
+
+
+```{r Rhat, results='asis'}
+for(param in param_names){
+  res <- knitr::knit_child('template_Rhat.Rmd',
+                          quiet = TRUE)
+  cat(unlist(res), sep = '\n')
+}
+```
+
+
+## Effective sample size (ESS)
+<!-- BDA3 p.287 : for many purposes it should suffice to have 100; As a default rule, we suggest running the simulation -->
+<!-- until n_eff is at least 5*m (m is twice the number of chains, as chains were split to calculate Rhat) -->
+### total number of trajectories with low ESS (< `r thr_n_eff_low`)  (out of `r dim(arr_summary)[1]`)
+```{r, comment=NA}
+sum(rowSums(arr_summary[, , "n_eff"] < thr_n_eff_low) > 0)
+```
+
+
+### number of trajectories with low ESS (< `r thr_n_eff_low`) per parameter (out of `r dim(arr_summary)[1]`)
+```{r, comment=NA}
+param_names <- dimnames(arr_summary)$parameters
+col_name <- paste0("n_eff < ", thr_n_eff_low)
+num_n_eff <- matrix(NA, nrow = length(param_names), ncol = 1, 
+                   dimnames = list(param_names, c(col_name)))
+num_n_eff[ , col_name] <- colSums(arr_summary[, , "n_eff"] < thr_n_eff_low)
+knitr::kable(x = num_n_eff)
+```
+
+### number of parameters with low ESS (< 300) per trajectory (out of `r dim(arr_summary)[2]`)
+```{r, comment=NA, results='asis'}
+less_thr <- rowSums(arr_summary[, , "n_eff"] < thr_n_eff_low)
+less_thr_gr_0 <- which(less_thr > 0)
+num_n_eff <- matrix(NA, nrow = 1, ncol = length(less_thr_gr_0), 
+                   dimnames = list(c(col_name), 
+                                   less_thr_gr_0))
+num_n_eff[col_name, ] <- less_thr[less_thr_gr_0]
+
+col_num <- length(less_thr_gr_0)
+if(col_num <= 20){
+  knitr::kable(x = num_n_eff)
+}else{
+  n_full_row <- floor(col_num / 20)
+  for(i in 1:n_full_row){
+    print(knitr::kable(x = num_n_eff[, ((i-1)*20 + 1): (i*20), drop=FALSE]))
+  }
+  if( n_full_row * 20 > col_num){
+    knitr::kable(x = num_Rhat[, (n_full_row*20 + 1): col_num])
+  }
+}
+```
+
+```{r n_eff, results='asis'}
+for(param in param_names){
+  res <- knitr::knit_child('template_n_eff.Rmd',
+                          quiet = TRUE)
+  cat(unlist(res), sep = '\n')
+}
+```
+
+
+## Find problematic trajectories and parameters
+### Are there any trajectories and parameters for which n_eff is below the threshold, but Rhat does not exceed the threshold?
+```{r}
+any(((arr_summary[, , "n_eff"] < thr_n_eff_low) - (arr_summary[, , "Rhat"] > thr_high_Rhat))==1)
+```
+
+### parameters per trajectories with very high Rhat
+```{r, comment=NA}
+a <- arr_summary[which(gr_very_high_Rhat > 0), , "Rhat"] > thr_very_high_Rhat
+res_list <- apply(a, 1, function(x) names(x)[x])
+#res_list
+invisible(lapply(seq_along(res_list), function(i){ cat(sep="",  names(res_list)[i], ":   ") ; cat(sep="  ",res_list[[i]], "\n")}))
+```
+
+<!-- ```{r} -->
+<!-- param_gr_very_high_Rhat <- colSums(arr_summary[, , "Rhat"] > thr_very_high_Rhat) -->
+<!-- param_ind_gr_very_high_Rhat <- which(param_gr_very_high_Rhat > 0) -->
+<!-- num_param_gr_very_high_Rhat <- length(param_ind_gr_very_high_Rhat) -->
+<!-- half_num_param_gr_very_high_Rhat <- ceiling(num_param_gr_very_high_Rhat / 2) -->
+<!-- knitr::kable(x = 1*(arr_summary[which(gr_very_high_Rhat > 0),  -->
+<!--                                 param_ind_gr_very_high_Rhat[1:half_num_param_gr_very_high_Rhat], -->
+<!--                                 "Rhat"] > thr_very_high_Rhat)) -->
+<!-- knitr::kable(x = 1*(arr_summary[which(gr_very_high_Rhat > 0),  -->
+<!--                                 param_ind_gr_very_high_Rhat[(half_num_param_gr_very_high_Rhat + 1):num_param_gr_very_high_Rhat], -->
+<!--                                 "Rhat"] > thr_very_high_Rhat)) -->
+<!-- ``` -->
+
+
+#### unique combinations:
+```{r, comment=NA}
+# find all unique combinations of parameter vectors in res_list
+list_unique_vectors <- function(res_list){
+  uniq_list <- list()
+  uniq_list[[1]] <- res_list[[1]]
+  for(j in 2:length(res_list)){
+    length_list <- length(uniq_list)
+    vec <- res_list[[j]]
+    same_vec <- vector(mode = 'numeric', length = length_list)
+    for(i in 1:length_list){
+      a <- setdiff(uniq_list[[i]], vec)
+      b <- setdiff( vec, uniq_list[[i]])
+      same_vec[i] <- ifelse(length(a)+length(b)==0, TRUE, FALSE)
+    }
+    if(all(!same_vec)) uniq_list[[length_list + 1]] <- vec
+  }
+  return(uniq_list)
+}
+
+uniq_list <- list_unique_vectors(res_list)
+
+cat(sep="", "number of unique combinations:\t", length(uniq_list), "\n\n")
+
+# count how often each combination occurs
+count_occurence <- function(uniq_list, res_list){
+  num_occurence <- vector(mode = 'numeric', length = length(uniq_list))
+  length_list <- length(uniq_list)
+  ind_to_check <- 1:length(res_list)
+  for(i in 1:length_list){
+    for(j in ind_to_check){
+      vec_uniq_list <- uniq_list[[i]]
+      vec_res_list <- res_list[[j]]
+      a <- setdiff(vec_uniq_list, vec_res_list)
+      b <- setdiff(vec_res_list, vec_uniq_list)
+      is_the_same <- ifelse(length(a)+length(b)==0, TRUE, FALSE)
+      num_occurence[i] <- num_occurence[i] + ifelse(length(a)+length(b)==0, 1, 0)
+      if(is_the_same) ind_to_check <- setdiff(ind_to_check, j)
+    }
+  }
+  num_occurence
+}
+num_occurence <- count_occurence(uniq_list, res_list)
+
+cat("combinations and number of their occruence:\n")
+invisible(lapply(seq_along(uniq_list), function(i){cat(sep="  ", num_occurence[i], ":", uniq_list[[i]], "\n")}))
+```
+
+
+## Overview of estimates
+
+```{r}
+# split input argument `dataset` at second underscore
+dataset_split <- strsplit(sub('(^[^_]+_[^_]+)_(.*)$', '\\1 \\2',
+                              dataset), ' ')[[1]]
+# split second element  at underscores
+dataset_split2 <- strsplit(dataset_split[2], '_')[[1]]
+
+# for simulated data, load and restructure the model parameters used for simulation
+if(dataset_split[1] == "simulated_data"){
+  data_path <- paste0("data/simulated_data/", dataset_split[2], "/", sep = "")
+  load(file = paste0(data_path, "simulated_trajectory_1.Rdata", sep = ""))
+  true_values <- rep(NA, times=length(param_names))
+  names(true_values) <- param_names
+  true_values[c("theta[1]","theta[2]","theta[3]")] <- pars$theta
+  true_values["m0"] <- pars$m0
+  true_values["scale"] <- pars$scale
+  true_values["prod_theta2_m0"] <- pars$theta[2] * pars$m0
+  true_values["prod_theta2_scale"] <- pars$theta[2] * pars$scale
+  true_values["prod_m0_scale"] <- pars$m0 * pars$scale
+  true_values["prod_theta2_m0_scale"] <- pars$theta[2] * pars$m0 * pars$scale
+  if(model_type == "ODE" ){
+    true_values["sigma"] <- pars$sigma
+    true_values["offset"] <- pars$offset
+    true_values["t0"] <- pars$t0
+  }else if(dataset_split2[2] == "with"){
+    true_values["sigma"] <- pars$sigma
+    true_values["offset"] <- pars$offset
+  }
+}  
+```
+
+
+```{r estimates, results='asis'}
+for(param in param_names){
+  res <- knitr::knit_child('template_estimates.Rmd',
+                          quiet = TRUE)
+  cat(unlist(res), sep = '\n')
+}
+```
+
+\newpage
+## Summary of length of 95\% credible intervals (CIs)
+Here we give the median, standard deviation (sd), and coefficient of variation (cv) of the length of the 95\% CIs.
+
+For simulated data (where the true parameter values are known), we also give the number of times that the CI covers the true value and median, sd, and cv of the length of those 95\% CIs that cover the true value.
+
+```{r length_CIs}
+if(dataset_split[1] == "simulated_data"){
+  res_col_names <- c("median_length_CI", "sd_length_CI", "cv_length_CI",
+                     "num_true_value_covered",
+                     "median_length_CI_true_value_covered",
+                     "sd_length_CI_true_value_covered",
+                     "cv_length_CI_true_value_covered")
+  res_col_names_short <- c("median", "sd", "cv",
+                     "num_cover",
+                     "median_cover",
+                     "sd_cover",
+                     "cv_cover")
+  digits = c(3,3,3,0,3,3,3)
+}else{
+    res_col_names <- c("median_length_CI", "sd_length_CI", "cv_length_CI")
+  res_col_names_short <- c("median_l_CI", "sd_l_CI", "cv_l_CI")
+  digits = c(3,3,3)
+}
+
+res <- matrix(rep(NA, times = length(param_names) * length(res_col_names)),
+           ncol = length(res_col_names))
+colnames(res) <- res_col_names
+rownames(res) <- param_names
+length_CI <- arr_summary[ , , "97.5%"] - arr_summary[ , , "2.5%"]
+
+res[ , "median_length_CI"] <- apply(length_CI, 2, median)
+res[ , "sd_length_CI"] <- apply(length_CI, 2, sd)
+res[ , "cv_length_CI"] <- apply(length_CI, 2, function(x) sd(x)/mean(x))
+
+if(dataset_split[1] == "simulated_data"){
+  true_value_in_CI <- apply(arr_summary, 1, 
+                     function(x) true_values >= x[ , "2.5%"] & true_values <= x[ , "97.5%"])
+  res[ , "num_true_value_covered"] <- apply(true_value_in_CI, 1, sum)
+  ind_tv_covered_at_least_once <- which(!is.na(res[ , "num_true_value_covered"]) & 
+    res[ , "num_true_value_covered"] > 0)
+  for(i in ind_tv_covered_at_least_once){
+    length_of_CI_covering_tv <- length_CI[true_value_in_CI[i,], i] 
+    res[i, "median_length_CI_true_value_covered"] <-
+      median(length_of_CI_covering_tv)
+    res[i, "sd_length_CI_true_value_covered"] <-
+      sd(length_of_CI_covering_tv)
+    res[i, "cv_length_CI_true_value_covered"] <- 
+      sd(length_of_CI_covering_tv) / mean(length_of_CI_covering_tv)
+    }
+}
+
+knitr::kable(x = res, 
+             col.names = res_col_names_short,
+             digits = digits)
+```
+
+
+The following table shows the values of the median of 
+*the length of the CIs divided by the median of each sample* 
+$$m_1=\text{median}\left(\frac{q_i(0.975)-q_i(0.025)}{q_i(0.5)}\right),$$ 
+the median of 
+*the length of the CIs divided by the mean of each sample* 
+$$m_1=\text{median}\left(\frac{q_i(0.975)-q_i(0.025)}{sample\_mean}\right),$$ 
+as well as the  median of the length of the CIs divided by *the median of the medians of the sample* $$m_3=\frac{\text{median}(q_i(0.975)-q_i(0.025))}{\text{median}(q_i(0.5))}.$$
+and (if applicable) the median of *the length of the CIs divided by the true value* 
+$$m_4=\frac{\text{median}(q_i(0.975)-q_i(0.025))}{\text{true value}}.$$
+
+```{r length_CIs2}
+if(dataset_split[1] == "simulated_data"){
+  res_col_names <- c("median_length_CI_div_median", 
+                     "median_length_CI_div_mean",
+                     "median_length_CI_div_median_of_medians", 
+                     "median_length_CI_div_by_true_value", 
+                     "num_true_value_covered",
+                     "median_length_CI_div_median_true_value_covered",
+                     "median_length_CI_div_median_of_medians_true_value_covered")
+  res_col_names_short <- c("m_1", "m_2", "m_3", "m_4",
+                     "num_cover",
+                     "m_1_cover",
+                     "m_3_cover")
+  digits = c(2,2,2,2,0,2,2)
+}else{
+    res_col_names <- c("median_length_CI_div_median", 
+                     "median_length_CI_div_mean",
+                       "median_length_CI_div_median_of_medians")
+  res_col_names_short <- c("m_1", "m_2", "m_3")
+  digits = c(2,2,2)
+}
+
+res <- matrix(rep(NA, times = length(param_names) * length(res_col_names)),
+           ncol = length(res_col_names))
+colnames(res) <- res_col_names
+rownames(res) <- param_names
+length_CI <- arr_summary[ , , "97.5%"] - arr_summary[ , , "2.5%"]
+
+res[ , "median_length_CI_div_median"] <- 
+  apply(length_CI/ arr_summary[ , , "50%"], 2, median)
+res[ , "median_length_CI_div_mean"] <- 
+  apply(length_CI/ arr_summary[ , , "mean"], 2, median)
+res[ , "median_length_CI_div_median_of_medians"] <- 
+  apply(length_CI, 2, median) /  apply(arr_summary[ , , "50%"], 2, median)
+
+if(dataset_split[1] == "simulated_data"){
+  res[ , "median_length_CI_div_by_true_value"] <- 
+    apply(length_CI, 2, median) / true_values
+  true_value_in_CI <- apply(arr_summary, 1, 
+                     function(x) true_values >= x[ , "2.5%"] & true_values <= x[ , "97.5%"])
+  res[ , "num_true_value_covered"] <- apply(true_value_in_CI, 1, sum)
+  ind_tv_covered_at_least_once <- which(!is.na(res[ , "num_true_value_covered"]) & 
+    res[ , "num_true_value_covered"] > 0)
+  for(i in ind_tv_covered_at_least_once){
+    length_of_CI_covering_tv <- length_CI[true_value_in_CI[i,], i] 
+    res[i, "median_length_CI_div_median_true_value_covered"] <-
+      median(length_of_CI_covering_tv / arr_summary[true_value_in_CI[i,] , i, "50%"])
+    res[i, "median_length_CI_div_median_of_medians_true_value_covered"] <- 
+      median(length_of_CI_covering_tv) / median(arr_summary[true_value_in_CI[i,] , i, "50%"])
+    }
+}
+
+knitr::kable(x = res, 
+             col.names = res_col_names_short,
+             digits = digits)
+```
