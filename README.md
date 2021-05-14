@@ -1,6 +1,6 @@
 # Modeling the translation kinetics after mRNA transfection
 
-This repository accompanies the article 
+This repository accompanies the manuscript 
 
 *Pieschner, Hasenauer, Fuchs (2021). "Identifiability analysis for models of the translation kinetics after mRNA transfection"*.
 
